@@ -1,50 +1,269 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Journeynest - Local Booking</title>
+    <title>Journeynest - Your Local Booking Partner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
-        header { background-color: #ff6a00; color: white; padding: 20px; text-align: center; }
-        .container { width: 80%; margin: 20px auto; }
-        .search-form { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); margin-bottom: 30px; }
-        .hotel-card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); margin-bottom: 15px; border-left: 5px solid #ff6a00; }
-        .hotel-card h3 { color: #333; margin-top: 0; }
-        .room-details { font-size: 0.9em; color: #555; }
-        .error { color: red; text-align: center; }
-        label { display: block; margin-top: 10px; font-weight: bold; }
-        input[type="date"], button { padding: 10px; margin-top: 5px; width: 100%; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; }
-        button { background-color: #333; color: white; cursor: pointer; border: none; }
-        button:hover { background-color: #555; }
+        :root {
+            --primary-color: #ff6a00; /* Journeynest Orange */
+            --secondary-color: #333;
+            --accent-color: #007bff;
+            --background-light: #f8f9fa;
+            --background-dark: #e9ecef;
+            --text-dark: #212529;
+            --text-light: #6c757d;
+            --card-bg: #ffffff;
+            --shadow-light: rgba(0, 0, 0, 0.08);
+            --shadow-medium: rgba(0, 0, 0, 0.12);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            box-shadow: 0 4px 10px var(--shadow-medium);
+            position: relative;
+            overflow: hidden;
+        }
+        header h1 {
+            margin: 0;
+            font-weight: 700;
+            font-size: 2.8em;
+            letter-spacing: 1px;
+        }
+        header p {
+            margin: 10px 0 0;
+            font-size: 1.2em;
+            font-weight: 300;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .search-form {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px var(--shadow-medium);
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .search-form h2 {
+            color: var(--secondary-color);
+            margin-top: 0;
+            font-weight: 600;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+        }
+        .search-inputs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: flex-end;
+        }
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.95em;
+        }
+        .form-group input[type="date"],
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1em;
+            color: var(--text-dark);
+            background-color: var(--background-light);
+        }
+        .form-group input[type="date"]:focus,
+        .form-group input[type="number"]:focus,
+        button:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(255, 106, 0, 0.25);
+        }
+        button {
+            padding: 12px 25px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            min-width: 150px;
+        }
+        button:hover {
+            background-color: #e65c00; /* Slightly darker orange */
+            transform: translateY(-2px);
+        }
+        #loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2em;
+            color: var(--text-light);
+            display: none;
+        }
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            padding: 20px;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+        #initial-message {
+            text-align: center;
+            padding: 30px;
+            font-size: 1.3em;
+            color: var(--text-light);
+            font-weight: 400;
+        }
+
+        .hotel-card {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 6px 15px var(--shadow-light);
+            margin-bottom: 30px;
+            border-left: 6px solid var(--primary-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .hotel-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px var(--shadow-medium);
+        }
+        .hotel-card h3 {
+            color: var(--secondary-color);
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-weight: 700;
+            font-size: 1.7em;
+        }
+        .hotel-card p {
+            color: var(--text-light);
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        .hotel-card .location {
+            font-style: italic;
+        }
+        .hotel-card .rating {
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        
+        .room-details-section {
+            margin-top: 20px;
+            border-top: 1px solid var(--background-dark);
+            padding-top: 20px;
+        }
+        .room-details-section h4 {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+        .room-card {
+            background-color: var(--background-light);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .room-card p {
+            margin: 0;
+            font-size: 0.9em;
+            flex: 1;
+            min-width: 150px;
+        }
+        .room-card p strong {
+            color: var(--secondary-color);
+        }
+        .room-card .price {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            header h1 { font-size: 2em; }
+            header p { font-size: 1em; }
+            .container { margin: 20px auto; }
+            .search-inputs { flex-direction: column; align-items: stretch; }
+            .form-group { min-width: unset; width: 100%; }
+            button { width: 100%; }
+        }
     </style>
 </head>
 <body>
 
     <header>
         <h1>Journeynest.online</h1>
-        <p>आपके शहर के लिए सबसे कम कमीशन पर बुकिंग।</p>
+        <p>Your Local Booking Partner with Lowest Commission.</p>
     </header>
 
     <div class="container">
         
         <div class="search-form">
-            <h2>होटल खोजें (Aurangabad)</h2>
-            <div id="loading" style="text-align: center; display: none;">डेटा लोड हो रहा है...</div>
-            <div id="search-inputs">
-                <label for="checkIn">चेक-इन</label>
-                <input type="date" id="checkIn" required>
-                
-                <label for="checkOut">चेक-आउट</label>
-                <input type="date" id="checkOut" required>
+            <h2>Find Hotels (Aurangabad)</h2>
+            <div id="loading" style="display: none;">Loading data...</div>
+            <div id="search-inputs-container">
+                <div class="search-inputs">
+                    <div class="form-group">
+                        <label for="checkIn">Check-in</label>
+                        <input type="date" id="checkIn" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="checkOut">Check-out</label>
+                        <input type="date" id="checkOut" required>
+                    </div>
 
-                <button onclick="fetchHotels()">होटल खोजें</button>
+                    <div class="form-group">
+                        <label for="numGuests">Guests</label>
+                        <input type="number" id="numGuests" value="1" min="1" required>
+                    </div>
+                    
+                    <button onclick="fetchHotels()">Search Hotels</button>
+                </div>
             </div>
         </div>
 
         <div id="hotel-list">
-            <p id="initial-message">खोज करने के लिए ऊपर तारीखें चुनें।</p>
+            <p id="initial-message">Select dates and click "Search Hotels" to find your stay.</p>
         </div>
 
     </div>
@@ -53,88 +272,113 @@
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
 
     <script>
-        // *** 5a. FIREBASE CONFIGURATION ***
-        // NOTE: आपको यहां अपनी वास्तविक Firebase Key डालनी होगी
-        // यह कुंजी आपको Firebase Console > Project Settings (Settings Icon) में मिलेगी।
+        // *** 5a. FIREBASE CONFIGURATION - YOU MUST REPLACE THESE WITH YOUR ACTUAL KEYS ***
+        // Get these from Firebase Console > Project Settings (Settings Icon) > "Your apps" section.
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY", // <--- यह बदलें
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com", // <--- यह बदलें
-            projectId: "YOUR_PROJECT_ID", // <--- यह बदलें
+            apiKey: "YOUR_API_KEY", // <--- REPLACE THIS
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com", // <--- REPLACE THIS
+            projectId: "YOUR_PROJECT_ID", // <--- REPLACE THIS
             storageBucket: "YOUR_PROJECT_ID.appspot.com",
             messagingSenderId: "SENDER_ID",
             appId: "APP_ID"
         };
 
-        // Firebase शुरू करें
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        
+        // DOM Elements
         const hotelListDiv = document.getElementById('hotel-list');
         const loadingDiv = document.getElementById('loading');
-        
+        const initialMessageDiv = document.getElementById('initial-message');
+
+        // Helper function to display messages
+        function displayMessage(message, isError = false) {
+            hotelListDiv.innerHTML = `<p class="${isError ? 'error-message' : 'initial-message'}">${message}</p>`;
+        }
+
         // *** 5b. FETCH DATA FUNCTION ***
         async function fetchHotels() {
             loadingDiv.style.display = 'block';
-            hotelListDiv.innerHTML = '';
+            initialMessageDiv.style.display = 'none'; // Hide initial message
+            hotelListDiv.innerHTML = ''; // Clear previous results
             
             const checkIn = document.getElementById('checkIn').value;
             const checkOut = document.getElementById('checkOut').value;
+            const numGuests = parseInt(document.getElementById('numGuests').value);
 
-            if (!checkIn || !checkOut) {
-                alert('कृपया चेक-इन और चेक-आउट की तारीखें चुनें।');
+            if (!checkIn || !checkOut || !numGuests) {
+                alert('Please select check-in/check-out dates and number of guests.');
                 loadingDiv.style.display = 'none';
                 return;
             }
 
             try {
-                // केवल 'Aurangabad' शहर के होटलों को पढ़ें
+                // Fetch hotels in 'Aurangabad'
                 const hotelsRef = db.collection("hotels").where("cityName", "==", "Aurangabad");
                 const snapshot = await hotelsRef.get();
 
                 if (snapshot.empty) {
-                    hotelListDiv.innerHTML = '<p class="error">क्षमा करें, इस शहर में कोई होटल नहीं मिला।</p>';
+                    displayMessage('Sorry, no hotels found in this city.', true);
                     return;
                 }
 
-                // हर होटल के लिए डेटा दिखाएं
                 const hotelPromises = snapshot.docs.map(async doc => {
                     const hotelData = doc.data();
                     const hotelId = doc.id;
                     
-                    // उस होटल के कमरे के प्रकार (room_types) पढ़ें
-                    const roomsRef = db.collection("room_types").where("hotelId", "==", hotelId);
+                    // Fetch room types for each hotel
+                    const roomsRef = db.collection("room_types")
+                                        .where("hotelId", "==", hotelId)
+                                        .where("maxGuests", ">=", numGuests); // Filter by guests
                     const roomsSnapshot = await roomsRef.get();
                     
                     let roomsHtml = '';
-                    roomsSnapshot.forEach(roomDoc => {
-                        const roomData = roomDoc.data();
-                        
-                        roomsHtml += `
-                            <div class="room-details">
-                                <h4>${roomData.name}</h4>
-                                <p><strong>कमरे का साइज़:</strong> ${roomData.sqFootage || 'N/A'} sq. ft. (आपकी समस्या का समाधान!)</p>
-                                <p><strong>बेडिंग:</strong> ${roomData.bedConfig}</p>
-                                <p><strong>मेहमान:</strong> ${roomData.maxGuests}</p>
-                                <p><strong>शुरुआती कीमत:</strong> ₹${roomData.basePrice} / रात</p>
-                                </div>
-                        `;
-                    });
+                    if (roomsSnapshot.empty) {
+                        roomsHtml = `<p class="error-message">No rooms available for ${numGuests} guests at this hotel.</p>`;
+                    } else {
+                        roomsSnapshot.forEach(roomDoc => {
+                            const roomData = roomDoc.data();
+                            
+                            roomsHtml += `
+                                <div class="room-card">
+                                    <p><strong>Room Type:</strong> ${roomData.name}</p>
+                                    <p><strong>Size:</strong> ${roomData.sqFootage || 'N/A'} sq. ft.</p>
+                                    <p><strong>Bedding:</strong> ${roomData.bedConfig}</p>
+                                    <p><strong>Max Guests:</strong> ${roomData.maxGuests}</p>
+                                    <p class="price">₹${roomData.basePrice || 'N/A'} / night</p>
+                                    </div>
+                            `;
+                        });
+                    }
 
                     return `
                         <div class="hotel-card">
                             <h3>${hotelData.name}</h3>
-                            <p>${hotelData.address}</p>
-                            <p>Rating: ${hotelData.starRating || 'N/A'} Stars</p>
-                            ${roomsHtml}
+                            <p class="location">${hotelData.address}</p>
+                            <p class="rating">Rating: ${hotelData.starRating || 'N/A'} Stars</p>
+                            <div class="room-details-section">
+                                <h4>Available Rooms</h4>
+                                ${roomsHtml}
+                            </div>
                         </div>
                     `;
                 });
 
                 const results = await Promise.all(hotelPromises);
                 hotelListDiv.innerHTML = results.join('');
+                if (results.length === 0) {
+                     displayMessage('No hotels or rooms matching your criteria.', true);
+                }
 
             } catch (error) {
-                console.error("होटल फ़ेच करने में त्रुटि:", error);
-                hotelListDiv.innerHTML = '<p class="error">डेटा लोड करने में कोई त्रुटि आई। कृपया कंसोल देखें।</p>';
+                console.error("Error fetching hotels:", error);
+                // Check if it's a permission denied error specifically
+                if (error.code === 'permission-denied') {
+                    displayMessage('Error: Permission denied. Please check your Firebase Security Rules and Configuration Keys.', true);
+                } else {
+                    displayMessage('Error loading data. Please check the console for details.', true);
+                }
             } finally {
                 loadingDiv.style.display = 'none';
             }
