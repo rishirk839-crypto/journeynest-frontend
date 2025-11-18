@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Journeynest - Your Local Booking Partner</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <style>
@@ -243,12 +244,12 @@
             <div id="search-inputs-container">
                 <div class="search-inputs">
                     <div class="form-group">
-                        <label for="checkIn">Check-in</label>
+                        <label for="checkIn">Check-in Date</label>
                         <input type="date" id="checkIn" required>
                     </div>
                     
                     <div class="form-group">
-                        <label for="checkOut">Check-out</label>
+                        <label for="checkOut">Check-out Date</label>
                         <input type="date" id="checkOut" required>
                     </div>
 
@@ -268,19 +269,20 @@
 
     </div>
 
+    
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
 
     <script>
-        // *** 5a. FIREBASE CONFIGURATION - YOU MUST REPLACE THESE WITH YOUR ACTUAL KEYS ***
-        // Get these from Firebase Console > Project Settings (Settings Icon) > "Your apps" section.
+        // *** 1. FIREBASE CONFIGURATION - KEYS INCLUDED ***
+        // These keys should resolve the 'Permission Denied' issue.
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY", // <--- REPLACE THIS
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com", // <--- REPLACE THIS
-            projectId: "YOUR_PROJECT_ID", // <--- REPLACE THIS
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "SENDER_ID",
-            appId: "APP_ID"
+            apiKey: "AIzaSyB@z702Sruw8peWQErUACY29H4TrzFNFDB",
+            authDomain: "journeynest-online.firebaseapp.com",
+            projectId: "journeynest-online",
+            storageBucket: "journeynest-online.firebasestorage.app",
+            messagingSenderId: "388444151898",
+            appId: "1:388444151898:web:c90263c256d019d0e13863"
         };
 
         // Initialize Firebase
@@ -297,7 +299,7 @@
             hotelListDiv.innerHTML = `<p class="${isError ? 'error-message' : 'initial-message'}">${message}</p>`;
         }
 
-        // *** 5b. FETCH DATA FUNCTION ***
+        // *** 2. FETCH DATA FUNCTION ***
         async function fetchHotels() {
             loadingDiv.style.display = 'block';
             initialMessageDiv.style.display = 'none'; // Hide initial message
@@ -314,8 +316,8 @@
             }
 
             try {
-                // Fetch hotels in 'Aurangabad'
-                const hotelsRef = db.collection("hotels").where("cityName", "==", "Aurangabad");
+                // Fetch hotels in 'Aurangabad'. Note: Using lowercase 'aurangabad' for consistency with database entry
+                const hotelsRef = db.collection("hotels").where("cityName", "==", "aurangabad"); 
                 const snapshot = await hotelsRef.get();
 
                 if (snapshot.empty) {
@@ -327,10 +329,10 @@
                     const hotelData = doc.data();
                     const hotelId = doc.id;
                     
-                    // Fetch room types for each hotel
+                    // Fetch room types for each hotel, filtering by guests
                     const roomsRef = db.collection("room_types")
                                         .where("hotelId", "==", hotelId)
-                                        .where("maxGuests", ">=", numGuests); // Filter by guests
+                                        .where("maxGuests", ">=", numGuests);
                     const roomsSnapshot = await roomsRef.get();
                     
                     let roomsHtml = '';
@@ -347,7 +349,9 @@
                                     <p><strong>Bedding:</strong> ${roomData.bedConfig}</p>
                                     <p><strong>Max Guests:</strong> ${roomData.maxGuests}</p>
                                     <p class="price">₹${roomData.basePrice || 'N/A'} / night</p>
-                                    </div>
+                                    
+
+</div>
                             `;
                         });
                     }
@@ -355,7 +359,7 @@
                     return `
                         <div class="hotel-card">
                             <h3>${hotelData.name}</h3>
-                            <p class="location">${hotelData.address}</p>
+                            <p class="location">Address: ${hotelData.address}</p>
                             <p class="rating">Rating: ${hotelData.starRating || 'N/A'} Stars</p>
                             <div class="room-details-section">
                                 <h4>Available Rooms</h4>
@@ -373,11 +377,11 @@
 
             } catch (error) {
                 console.error("Error fetching hotels:", error);
-                // Check if it's a permission denied error specifically
-                if (error.code === 'permission-denied') {
-                    displayMessage('Error: Permission denied. Please check your Firebase Security Rules and Configuration Keys.', true);
+                // Custom error handling for Permission denied 
+                if (error.code === 'permission-denied' || error.message.includes('permission denied')) {
+                    displayMessage('Error: Permission denied. Your Firebase Keys are correct, but ensure your Firestore Rules allow reading (allow read: if true;).', true);
                 } else {
-                    displayMessage('Error loading data. Please check the console for details.', true);
+                    displayMessage('Error loading data. Please check the console for connection details.', true);
                 }
             } finally {
                 loadingDiv.style.display = 'none';
