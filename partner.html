@@ -9,8 +9,32 @@
         .container { max-width: 900px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         h1 { color: #ff6a00; border-bottom: 2px solid #eee; padding-bottom: 10px; font-weight: 700; }
         h2 { color: #333; margin-top: 25px; }
-        .auth-form input { width: 100%; padding: 10px; margin: 5px 0 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .auth-form button, .dashboard button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        
+        /* UPDATED LOGIN CSS FOR WIDER LOOK */
+        #auth-area { text-align: center; padding: 20px 0; }
+        .auth-form { max-width: 400px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .auth-form input { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 5px 0 15px 0; 
+            border: 1px solid #ccc; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            font-size: 1em;
+        }
+        .auth-form button, .dashboard button { 
+            background-color: #007bff; 
+            color: white; 
+            padding: 12px 15px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin-top: 10px; 
+            width: 100%; /* Make login button full width */
+            font-size: 1em;
+        }
+        
+        /* Standard Dashboard CSS */
         #partner-dashboard { display: none; margin-top: 20px; }
         .rate-form { border: 1px solid #ff6a00; padding: 20px; margin-bottom: 30px; border-radius: 6px; background-color: #fff9f4; }
         .rate-form h3 { color: #ff6a00; margin-top: 0; }
@@ -60,7 +84,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
 
     <script>
-        // *** 1. CONFIGURATION (KEYS INCLUDED) ***
+        // --- 1. CONFIGURATION (KEYS INCLUDED) ---
         const firebaseConfig = {
             apiKey: "AIzaSyB@z702Sruw8peWQErUACY29H4TrzFNFDB",
             authDomain: "journeynest-online.firebaseapp.com",
@@ -142,7 +166,6 @@
         async function getHotelAndRenderForm(hotelId) {
             try {
                 const hotelDoc = await db.collection('hotels').doc(hotelId).get();
-                // Query rooms by hotelId (Requires index on room_types.hotelId if you implement querying here)
                 const roomTypesSnapshot = await db.collection('room_types').where('hotelId', '==', hotelId).get();
                 
                 if (hotelDoc.exists) {
@@ -163,7 +186,7 @@
             }
         }
 
-        // Render the Inventory Form UI
+        // Render the Inventory Form UI (Core Management Tool)
         function renderInventoryForm(roomTypes) {
             let html = roomTypes.map(room => `
                 <div class="rate-form">
@@ -186,7 +209,7 @@
 
                     <h4>Photos & Videos</h4>
                     <input type="file" id="file-upload-${room.id}" accept="image/*,video/*" multiple>
-                    <button class="upload-btn" onclick="uploadMedia('${room.id}')">Upload Media</button>
+                    <button class="upload-btn" onclick="uploadMedia('${room.id}')" style="background-color: #ff6a00;">Upload Media</button>
                     <p id="upload-status-${room.id}" style="font-size: 0.9em;"></p>
 
                     <div style="margin-top: 10px;">
@@ -208,7 +231,7 @@
             const statusEl = document.getElementById(`room-status-${roomId}`);
 
             if (!date || !price || availableCount === "") {
-                statusEl.textContent = 'Error: Please fill all fields.';
+                statusEl.textContent = 'Error: Please fill all required fields.';
                 statusEl.style.color = 'red';
                 return;
             }
@@ -219,7 +242,6 @@
             const updateFunction = functions.httpsCallable('updateRateAndAvailability');
 
             try {
-                // The deployment of this function is required for the update to work securely
                 const result = await updateFunction({
                     hotelId: partnerHotelId,
                     roomId: roomId,
