@@ -103,11 +103,8 @@
             background-color: var(--background-light);
         }
         .form-group input[type="date"]:focus,
-        .form-group input[type="number"]:focus,
-        button:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(255, 106, 0, 0.25);
+        .form-group input[type="number"] {
+            /* We need firebase-functions, which is an external script */
         }
         button {
             padding: 12px 25px;
@@ -272,10 +269,8 @@
     
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-
-    <script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-functions.js"></script> <script>
         // *** 1. FIREBASE CONFIGURATION - KEYS INCLUDED ***
-        // These keys should resolve the 'Permission Denied' issue.
         const firebaseConfig = {
             apiKey: "AIzaSyB@z702Sruw8peWQErUACY29H4TrzFNFDB",
             authDomain: "journeynest-online.firebaseapp.com",
@@ -286,8 +281,8 @@
         };
 
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        const app = firebase.initializeApp(firebaseConfig);
+        const functions = firebase.functions(); // Initialize Functions SDK
         
         // DOM Elements
         const hotelListDiv = document.getElementById('hotel-list');
@@ -299,7 +294,7 @@
             hotelListDiv.innerHTML = `<p class="${isError ? 'error-message' : 'initial-message'}">${message}</p>`;
         }
 
-        // *** 2. FETCH DATA FUNCTION ***
+        // *** 2. FETCH DATA FUNCTION - UPDATED TO CALL CLOUD FUNCTION ***
         async function fetchHotels() {
             loadingDiv.style.display = 'block';
             initialMessageDiv.style.display = 'none'; // Hide initial message
@@ -316,73 +311,60 @@
             }
 
             try {
-                // Fetch hotels in 'Aurangabad'. Note: Using lowercase 'aurangabad' for consistency with database entry
-                const hotelsRef = db.collection("hotels").where("cityName", "==", "aurangabad"); 
-                const snapshot = await hotelsRef.get();
+                // Call the secure Cloud Function (searchHotels)
+                const searchFunction = functions.httpsCallable('searchHotels');
+                const result = await searchFunction({ cityName: "aurangabad", checkIn: checkIn, checkOut: checkOut, guests: numGuests }); 
 
-                if (snapshot.empty) {
-                    displayMessage('Sorry, no hotels found in this city.', true);
+                if (result.data.success === false) {
+                    displayMessage(result.data.message, true);
                     return;
                 }
 
-                const hotelPromises = snapshot.docs.map(async doc => {
-                    const hotelData = doc.data();
-                    const hotelId = doc.id;
-                    
-                    // Fetch room types for each hotel, filtering by guests
-                    const roomsRef = db.collection("room_types")
-                                        .where("hotelId", "==", hotelId)
-                                        .where("maxGuests", ">=", numGuests);
-                    const roomsSnapshot = await roomsRef.get();
-                    
-                    let roomsHtml = '';
-                    if (roomsSnapshot.empty) {
-                        roomsHtml = `<p class="error-message">No rooms available for ${numGuests} guests at this hotel.</p>`;
-                    } else {
-                        roomsSnapshot.forEach(roomDoc => {
-                            const roomData = roomDoc.data();
-                            
-                            roomsHtml += `
-                                <div class="room-card">
-                                    <p><strong>Room Type:</strong> ${roomData.name}</p>
-                                    <p><strong>Size:</strong> ${roomData.sqFootage || 'N/A'} sq. ft.</p>
-                                    <p><strong>Bedding:</strong> ${roomData.bedConfig}</p>
-                                    <p><strong>Max Guests:</strong> ${roomData.maxGuests}</p>
-                                    <p class="price">₹${roomData.basePrice || 'N/A'} / night</p>
-                                    
+                const hotelsList = result.data.hotels;
 
-</div>
-                            `;
-                        });
+                if (hotelsList.length === 0) {
+                    displayMessage('Sorry, no hotels found matching your criteria.', true);
+                    return;
+                }
+
+                // Process and render results from the function
+                const resultsHtml = hotelsList.map(hotelData => {
+                    let roomsHtml = '';
+
+                    if (hotelData.rooms && hotelData.rooms.length > 0) {
+                        // Client-side filtering based on guests (data retrieved from server)
+                        const filteredRooms = hotelData.rooms.filter(r => r.maxGuests >= numGuests);
+                        
+                        roomsHtml = filteredRooms.map(roomData => `
+                            <div class="room-card">
+                                <p><strong>Room Type:</strong> ${roomData.name}</p>
+                                <p><strong>Size:</strong> ${roomData.sqFootage || 'N/A'} sq. ft.</p>
+                                <p><strong>Bedding:</strong> ${roomData.bedConfig}</p>
+                                <p class="price">₹${roomData.basePrice || 'N/A'} / night</p>
+                                
+                            </div>
+                        `).join('');
+                    } else {
+                        roomsHtml = `<p class="error-message">No room types found for this hotel.</p>`;
                     }
 
                     return `
                         <div class="hotel-card">
                             <h3>${hotelData.name}</h3>
                             <p class="location">Address: ${hotelData.address}</p>
-                            <p class="rating">Rating: ${hotelData.starRating || 'N/A'} Stars</p>
                             <div class="room-details-section">
                                 <h4>Available Rooms</h4>
-                                ${roomsHtml}
+                                ${roomsHtml || '<p class="error-message">No matching rooms available for selected guests.</p>'}
                             </div>
                         </div>
                     `;
-                });
+                }).join('');
 
-                const results = await Promise.all(hotelPromises);
-                hotelListDiv.innerHTML = results.join('');
-                if (results.length === 0) {
-                     displayMessage('No hotels or rooms matching your criteria.', true);
-                }
+                hotelListDiv.innerHTML = resultsHtml;
 
             } catch (error) {
-                console.error("Error fetching hotels:", error);
-                // Custom error handling for Permission denied 
-                if (error.code === 'permission-denied' || error.message.includes('permission denied')) {
-                    displayMessage('Error: Permission denied. Your Firebase Keys are correct, but ensure your Firestore Rules allow reading (allow read: if true;).', true);
-                } else {
-                    displayMessage('Error loading data. Please check the console for connection details.', true);
-                }
+                console.error("Error calling function:", error);
+                displayMessage('Error: Could not connect to the server function. Please check Firebase deployment status in the console.', true);
             } finally {
                 loadingDiv.style.display = 'none';
             }
