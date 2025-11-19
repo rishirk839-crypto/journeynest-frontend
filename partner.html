@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journeynest Partner Dashboard</title>
+    <style>
+        body { font-family: 'Poppins', Arial, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { color: #ff6a00; border-bottom: 2px solid #eee; padding-bottom: 10px; font-weight: 700; }
+        h2 { color: #333; margin-top: 25px; }
+        .auth-form input { width: 100%; padding: 10px; margin: 5px 0 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .auth-form button, .dashboard button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        #partner-dashboard { display: none; margin-top: 20px; }
+        .rate-form { border: 1px solid #ff6a00; padding: 20px; margin-bottom: 30px; border-radius: 6px; background-color: #fff9f4; }
+        .rate-form h3 { color: #ff6a00; margin-top: 0; }
+        .rate-form label { display: block; margin-top: 10px; font-weight: bold; }
+        .rate-form input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; width: 100%; box-sizing: border-box; }
+        .rate-form .update-btn { background-color: #ff6a00; margin-top: 15px; width: 100%; }
+        .rate-form .upload-btn { background-color: #333; margin-top: 15px; }
+        #loading, #status { text-align: center; margin-top: 20px; color: orange; font-weight: bold; }
+        .error { color: red; }
+        .uploaded-img { width: 80px; height: 60px; object-fit: cover; margin-right: 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Journeynest Partner Dashboard</h1>
+
+        <div id="auth-area">
+            <h2>Partner Login</h2>
+            <div class="auth-form">
+                <input type="email" id="login-email" placeholder="Email (e.g., partner@journeynest.com)">
+                <input type="password" id="login-password" placeholder="Password (e.g., demo1234)">
+                <button onclick="loginPartner()">Login</button>
+            </div>
+        </div>
+
+        <div id="partner-dashboard">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                <p style="font-size: 1.1em;">Welcome, <span id="partner-email"></span>! Managing: <strong id="hotel-name">Checking Access...</strong></p>
+                <button onclick="logoutPartner()" style="background-color: #dc3545;">Logout</button>
+            </div>
+            
+            <h2 style="margin-top: 25px;">Inventory Management</h2>
+            <p id="hotel-details-status" style="color: grey; font-style: italic;">Loading room types and rates...</p>
+
+            <div id="inventory-form-area">
+                </div>
+        </div>
+
+        <p id="loading">Connecting to Firebase...</p>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-functions.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+
+    <script>
+        // *** 1. CONFIGURATION (KEYS INCLUDED) ***
+        const firebaseConfig = {
+            apiKey: "AIzaSyB@z702Sruw8peWQErUACY29H4TrzFNFDB",
+            authDomain: "journeynest-online.firebaseapp.com",
+            projectId: "journeynest-online",
+            storageBucket: "journeynest-online.firebasestorage.app",
+            messagingSenderId: "388444151898",
+            appId: "1:388444151898:web:c90263c256d019d0e13863"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const functions = firebase.functions();
+        const storage = firebase.storage(); // Init Storage
+
+        let partnerHotelId = null; 
+
+        // --- 2. AUTHENTICATION & AUTHORIZATION ---
+        
+        function loginPartner() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            auth.signInWithEmailAndPassword(email, password)
+                .catch((error) => { alert('Login Failed: ' + error.message); });
+        }
+
+        function logoutPartner() {
+            auth.signOut().then(() => { alert('Logged out successfully.'); });
+        }
+
+        auth.onAuthStateChanged(user => {
+            document.getElementById('loading').style.display = 'none';
+
+            if (user) {
+                document.getElementById('auth-area').style.display = 'none';
+                document.getElementById('partner-dashboard').style.display = 'block';
+                document.getElementById('partner-email').textContent = user.email;
+                getUserRole(user.uid);
+            } else {
+                document.getElementById('auth-area').style.display = 'block';
+                document.getElementById('partner-dashboard').style.display = 'none';
+                partnerHotelId = null; 
+            }
+        });
+
+        // Get User Role and Hotel ID from Firestore
+        async function getUserRole(uid) {
+            try {
+                const userDoc = await db.collection('users').doc(uid).get();
+                if (userDoc.exists) {
+                    const data = userDoc.data();
+                    
+                    if (data.role === 'partner' && data.hotelId) {
+                        partnerHotelId = data.hotelId;
+                        getHotelAndRenderForm(partnerHotelId); 
+                    } else if (data.role === 'admin') {
+                         document.getElementById('hotel-name').textContent = 'Admin Mode (All Access)';
+                         // Use our dummy hotel for initial admin demo
+                         partnerHotelId = 'bxw5N9LpiaGbyoOinEoc'; 
+                         getHotelAndRenderForm(partnerHotelId);
+                    } 
+                    else {
+                        document.getElementById('hotel-details-status').innerHTML = '<span class="error">Access Denied: Not a registered partner/admin.</span>';
+                        auth.signOut();
+                    }
+                } else {
+                    document.getElementById('hotel-details-status').innerHTML = '<span class="error">User role not found. Contact Admin.</span>';
+                    auth.signOut();
+                }
+            } catch (error) {
+                console.error("Error getting user role:", error);
+                document.getElementById('hotel-details-status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        // --- 3. INVENTORY MANAGEMENT LOGIC ---
+
+        // Get Hotel Details and Render Inventory Form
+        async function getHotelAndRenderForm(hotelId) {
+            try {
+                const hotelDoc = await db.collection('hotels').doc(hotelId).get();
+                // Query rooms by hotelId (Requires index on room_types.hotelId if you implement querying here)
+                const roomTypesSnapshot = await db.collection('room_types').where('hotelId', '==', hotelId).get();
+                
+                if (hotelDoc.exists) {
+                    const hotel = hotelDoc.data();
+                    const roomTypes = roomTypesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                    document.getElementById('hotel-name').textContent = hotel.name;
+                    document.getElementById('hotel-details-status').textContent = `Managing ${roomTypes.length} room types.`;
+                    
+                    renderInventoryForm(roomTypes);
+
+                } else {
+                    document.getElementById('hotel-details-status').innerHTML = '<span class="error">Hotel not found. Contact Admin.</span>';
+                }
+            } catch (error) {
+                console.error("Error fetching hotel details:", error);
+                document.getElementById('hotel-details-status').innerHTML = `<span class="error">Error fetching hotel details: ${error.message}</span>`;
+            }
+        }
+
+        // Render the Inventory Form UI
+        function renderInventoryForm(roomTypes) {
+            let html = roomTypes.map(room => `
+                <div class="rate-form">
+                    <h3>${room.name || 'Room Type'} (ID: ${room.id.substring(0, 5)}...)</h3>
+                    
+                    <h4>Rate & Availability Update</h4>
+                    <label for="date-${room.id}">Date to Update:</label>
+                    <input type="date" id="date-${room.id}" required>
+
+                    <label for="price-${room.id}">Price (INR):</label>
+                    <input type="number" id="price-${room.id}" min="100" placeholder="e.g., 2500" required>
+
+                    <label for="count-${room.id}">Available Rooms:</label>
+                    <input type="number" id="count-${room.id}" min="0" placeholder="e.g., 5" required>
+
+                    <button class="update-btn" onclick="updateRate('${room.id}')">Update Rates & Availability</button>
+                    <p id="room-status-${room.id}" style="font-size: 0.9em;"></p>
+
+                    <hr style="margin: 20px 0; border-color: #fff;">
+
+                    <h4>Photos & Videos</h4>
+                    <input type="file" id="file-upload-${room.id}" accept="image/*,video/*" multiple>
+                    <button class="upload-btn" onclick="uploadMedia('${room.id}')">Upload Media</button>
+                    <p id="upload-status-${room.id}" style="font-size: 0.9em;"></p>
+
+                    <div style="margin-top: 10px;">
+                        ${room.imageUrls && room.imageUrls.map(url => 
+                            `<img src="${url}" class="uploaded-img" alt="Room Media">`
+                        ).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('inventory-form-area').innerHTML = html;
+        }
+
+        // Call the Firebase Function to Update Rate (Needs to be deployed)
+        async function updateRate(roomId) {
+            const date = document.getElementById(`date-${roomId}`).value;
+            const price = document.getElementById(`price-${roomId}`).value;
+            const availableCount = document.getElementById(`count-${roomId}`).value;
+            const statusEl = document.getElementById(`room-status-${roomId}`);
+
+            if (!date || !price || availableCount === "") {
+                statusEl.textContent = 'Error: Please fill all fields.';
+                statusEl.style.color = 'red';
+                return;
+            }
+
+            statusEl.textContent = 'Updating...';
+            statusEl.style.color = 'orange';
+
+            const updateFunction = functions.httpsCallable('updateRateAndAvailability');
+
+            try {
+                // The deployment of this function is required for the update to work securely
+                const result = await updateFunction({
+                    hotelId: partnerHotelId,
+                    roomId: roomId,
+                    date: date.replace(/-/g, ''), 
+                    price: price,
+                    availableCount: availableCount
+                });
+
+                statusEl.textContent = result.data.message;
+                statusEl.style.color = 'green';
+                
+            } catch (error) {
+                statusEl.textContent = `Update Failed: ${error.message}`;
+                statusEl.style.color = 'red';
+            }
+        }
+
+        // Function 8. Upload Media (Saves URL to room_types.imageUrls array)
+        async function uploadMedia(roomId) {
+            const fileInput = document.getElementById(`file-upload-${roomId}`);
+            const statusEl = document.getElementById(`upload-status-${roomId}`);
+            const files = fileInput.files;
+
+            if (files.length === 0) {
+                statusEl.textContent = 'Please select files to upload.';
+                statusEl.style.color = 'red';
+                return;
+            }
+
+            statusEl.textContent = `Uploading ${files.length} file(s)...`;
+            statusEl.style.color = 'orange';
+
+            const uploadPromises = [];
+
+            for (const file of files) {
+                const filePath = `hotels/${partnerHotelId}/${roomId}/${Date.now()}_${file.name}`;
+                const storageRef = storage.ref(filePath);
+                
+                uploadPromises.push(storageRef.put(file).then(snapshot => snapshot.ref.getDownloadURL()));
+            }
+
+            try {
+                const urls = await Promise.all(uploadPromises);
+                
+                const roomRef = db.collection('room_types').doc(roomId);
+                await roomRef.update({
+                    imageUrls: firebase.firestore.FieldValue.arrayUnion(...urls)
+                });
+
+                statusEl.textContent = `Upload successful! ${files.length} items saved. Please refresh the page to see changes.`;
+                statusEl.style.color = 'green';
+                fileInput.value = '';
+
+            } catch (error) {
+                statusEl.textContent = `Upload Failed: ${error.message}`;
+                statusEl.style.color = 'red';
+            }
+        }
+    </script>
+</body>
+</html>
