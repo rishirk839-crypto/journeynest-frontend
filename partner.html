@@ -10,7 +10,7 @@
         h1 { color: #ff6a00; border-bottom: 2px solid #eee; padding-bottom: 10px; font-weight: 700; }
         h2 { color: #333; margin-top: 25px; }
         
-        /* UPDATED LOGIN CSS FOR WIDER LOOK */
+        /* Login CSS */
         #auth-area { text-align: center; padding: 20px 0; }
         .auth-form { max-width: 400px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .auth-form input { 
@@ -30,11 +30,11 @@
             border-radius: 6px; 
             cursor: pointer; 
             margin-top: 10px; 
-            width: 100%; /* Make login button full width */
+            width: 100%;
             font-size: 1em;
         }
         
-        /* Standard Dashboard CSS */
+        /* Dashboard CSS */
         #partner-dashboard { display: none; margin-top: 20px; }
         .rate-form { border: 1px solid #ff6a00; padding: 20px; margin-bottom: 30px; border-radius: 6px; background-color: #fff9f4; }
         .rate-form h3 { color: #ff6a00; margin-top: 0; }
@@ -84,17 +84,19 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
 
     <script>
-        // --- 1. CONFIGURATION (KEYS INCLUDED) ---
+        // *** 1. CONFIGURATION (KEYS INCLUDED) ***
+        // Keys updated with correct values provided by the user.
         const firebaseConfig = {
-            apiKey: "AIzaSyB@z702Sruw8peWQErUACY29H4TrzFNFDB",
+            apiKey: "AIzaSyBz27DzSruwBPeWQEE9uecV294HrzFNfD8",
             authDomain: "journeynest-online.firebaseapp.com",
             projectId: "journeynest-online",
             storageBucket: "journeynest-online.firebasestorage.app",
             messagingSenderId: "388444151898",
-            appId: "1:388444151898:web:c90263c256d019d0e13863"
+            appId: "1:388444151898:web:c90263c256d19b00e13863",
+            measurementId: "G-VJKMQ648L2"
         };
         
-        firebase.initializeApp(firebaseConfig);
+        const app = firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
         const functions = firebase.functions();
@@ -186,7 +188,7 @@
             }
         }
 
-        // Render the Inventory Form UI (Core Management Tool)
+        // Render the Inventory Form UI
         function renderInventoryForm(roomTypes) {
             let html = roomTypes.map(room => `
                 <div class="rate-form">
@@ -231,7 +233,7 @@
             const statusEl = document.getElementById(`room-status-${roomId}`);
 
             if (!date || !price || availableCount === "") {
-                statusEl.textContent = 'Error: Please fill all required fields.';
+                statusEl.textContent = 'Error: Please fill all fields.';
                 statusEl.style.color = 'red';
                 return;
             }
